@@ -1,14 +1,34 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
+use std::sync::mpsc::{self, Receiver, Sender};
+
+pub struct Endpoint {
+    sender: Sender<Vec<u8>>,
+    receiver: Receiver<Vec<u8>>,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+impl Endpoint {
+    pub fn send(&self, data: Vec<u8>) {
+        self.sender.send(data).unwrap();
+    }
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+    pub fn receive(&self) -> Option<Vec<u8>> {
+        self.receiver.try_recv().ok()
     }
 }
+
+pub fn create_wire() -> (Endpoint, Endpoint) {
+    let (a_tx, a_rx) = mpsc::channel();
+    let (b_tx, b_rx) = mpsc::channel();
+
+    let endpoint_a = Endpoint {
+        sender: a_tx,
+        receiver: b_rx,
+    };
+
+    let endpoint_b = Endpoint {
+        sender: b_tx,
+        receiver: a_rx,
+    };
+
+    (endpoint_a, endpoint_b)
+}
+
